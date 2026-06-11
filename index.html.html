@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة أداء الدكاتره</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--surface:#181c27;--card:#1e2334;--border:rgba(255,255,255,0.07);
+  --accent:#7c4dff;--green:#00c896;--red:#ff6b6b;--amber:#ffb830;--blue:#38bdf8;
+  --text:#f0f2f8;--muted:#8890a4;--font:'Segoe UI','Cairo',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+
+/* NO DATA */
+#no-data{display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:2rem;}
+.no-data-box{max-width:400px;}
+.no-data-box h2{font-size:22px;margin:1rem 0 8px;}
+.no-data-box p{color:var(--muted);font-size:14px;line-height:1.6;}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:.8rem 2rem;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#7c4dff,#00c896);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.logo h1{font-size:16px;font-weight:600;}
+.logo span{font-size:11px;color:var(--muted);display:block;}
+.updated-badge{font-size:12px;color:var(--muted);}
+
+/* MAIN */
+main{padding:2rem;max-width:1400px;margin:0 auto;}
+
+/* METRICS */
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:2rem;}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.2rem 1.4rem;position:relative;overflow:hidden;}
+.metric::before{content:'';position:absolute;top:0;right:0;width:4px;height:100%;border-radius:0 14px 14px 0;}
+.metric.purple::before{background:var(--accent);}
+.metric.green::before{background:var(--green);}
+.metric.red::before{background:var(--red);}
+.metric.amber::before{background:var(--amber);}
+.metric.blue::before{background:var(--blue);}
+.metric .m-label{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.metric .m-value{font-size:26px;font-weight:600;line-height:1;}
+.metric .m-sub{font-size:12px;color:var(--muted);margin-top:6px;}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:2rem;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;}
+.chart-card.full{grid-column:1/-1;}
+.chart-card.third{grid-column:span 1;}
+.chart-card h4{font-size:13px;font-weight:500;color:var(--muted);margin-bottom:1rem;letter-spacing:.5px;}
+.three-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:2rem;}
+
+/* TABLE */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin-bottom:2rem;overflow-x:auto;}
+.table-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px;}
+.table-header h4{font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.5px;}
+.search-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:6px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;width:200px;}
+.search-box:focus{border-color:var(--accent);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{text-align:right;padding:10px 14px;border-bottom:1px solid var(--border);
+  color:var(--muted);font-weight:500;font-size:12px;cursor:pointer;user-select:none;white-space:nowrap;}
+thead th:hover{color:var(--text);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:hover{background:rgba(255,255,255,.03);}
+tbody td{padding:10px 14px;vertical-align:middle;}
+.rank-badge{background:rgba(124,77,255,.15);color:var(--accent);border-radius:6px;
+  padding:2px 8px;font-size:12px;font-weight:600;display:inline-block;}
+.progress-bar-wrap{background:rgba(255,255,255,.07);border-radius:99px;height:6px;width:100px;overflow:hidden;display:inline-block;}
+.progress-bar-fill{height:100%;border-radius:99px;}
+.tag{display:inline-block;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:600;}
+.tag.high{background:rgba(0,200,150,.15);color:var(--green);}
+.tag.mid{background:rgba(255,184,48,.15);color:var(--amber);}
+.tag.low{background:rgba(255,107,107,.15);color:var(--red);}
+
+/* FILTER */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;}
+.filter-bar label{font-size:13px;color:var(--muted);}
+select{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);padding:7px 12px;font-size:13px;font-family:var(--font);outline:none;cursor:pointer;}
+select:focus{border-color:var(--accent);}
+
+/* PAGINATION */
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:1rem;flex-wrap:wrap;}
+.page-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 12px;color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font);}
+.page-btn:hover,.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* TOP 3 PODIUM */
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:12px;margin-bottom:2rem;}
+.podium-item{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:1.2rem 1rem;text-align:center;flex:1;max-width:200px;}
+.podium-item .pod-rank{font-size:28px;margin-bottom:8px;}
+.podium-item .pod-name{font-size:13px;font-weight:500;margin-bottom:4px;word-break:break-word;}
+.podium-item .pod-val{font-size:18px;font-weight:700;color:var(--accent);}
+.podium-item .pod-pct{font-size:11px;color:var(--muted);margin-top:4px;}
+.podium-item.gold{border-color:rgba(255,184,48,.4);background:rgba(255,184,48,.05);}
+.podium-item.silver{border-color:rgba(148,163,184,.4);}
+.podium-item.bronze{border-color:rgba(180,120,60,.4);}
+
+@media(max-width:700px){
+  main{padding:1rem;}
+  .charts-grid,.three-cols{grid-template-columns:1fr;}
+  .podium{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<!-- NO DATA STATE -->
+<div id="no-data">
+  <div class="no-data-box">
+    <div style="font-size:64px;margin-bottom:1rem;">📭</div>
+    <h2>لا توجد بيانات بعد</h2>
+    <p>في انتظار الأدمن يرفع الشيت ويضبط الإعدادات.<br>إذا كنت الأدمن، <a href="admin.html" style="color:var(--accent);">اضغط هنا للدخول</a>.</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📊</div>
+      <div>
+        <h1 id="dash-title">لوحة أداء الدكاتره</h1>
+        <span>تحليل التارجت والأرباح</span>
+      </div>
+    </div>
+    <span class="updated-badge" id="updated-badge"></span>
+  </header>
+
+  <main>
+    <!-- METRICS -->
+    <div class="metrics-row" id="metrics-row"></div>
+
+    <!-- FILTER -->
+    <div class="filter-bar" id="filter-bar" style="display:none">
+      <label>فلتر القسم:</label>
+      <select id="dept-filter" onchange="applyFilter()"></select>
+      <label style="margin-right:12px;">ترتيب حسب:</label>
+      <select id="sort-metric" onchange="applyFilter()">
+        <option value="revenue">الأرباح</option>
+        <option value="pct">نسبة التارجت</option>
+      </select>
+    </div>
+
+    <!-- PODIUM TOP 3 -->
+    <div class="podium" id="podium"></div>
+
+    <!-- CHARTS ROW 1 -->
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h4>🏆 أعلى الدكاتره — الأرباح مقابل التارجت</h4>
+        <canvas id="chart-revenue" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 2 -->
+    <div class="three-cols" id="row2-charts">
+      <div class="chart-card" id="target-card" style="display:none">
+        <h4>🎯 توزيع تحقيق التارجت</h4>
+        <canvas id="chart-target" height="240"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>📊 توزيع مستويات الأرباح</h4>
+        <canvas id="chart-dist" height="240"></canvas>
+      </div>
+      <div class="chart-card" id="dept-card" style="display:none">
+        <h4>🏢 الأرباح حسب القسم</h4>
+        <canvas id="chart-dept" height="240"></canvas>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-card">
+      <div class="table-header">
+        <h4>📋 جدول تفصيلي — كل الدكاتره</h4>
+        <input type="text" class="search-box" placeholder="🔍 ابحث..." oninput="searchTable(this.value)">
+      </div>
+      <table>
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const PAGE_SIZE = 20;
+let allRows = [], filteredRows = [], currentPage = 1;
+let sortCol = 'revenue', sortDir = -1, searchQuery = '';
+let charts = {}, cfg = {};
+
+window.onload = () => {
+  const data = localStorage.getItem('dashData');
+  const settings = localStorage.getItem('dashSettings');
+  if (!data || !settings) return;
+  const raw = JSON.parse(data);
+  cfg = JSON.parse(settings);
+  if (!cfg.name || !cfg.revenue) return;
+  document.getElementById('no-data').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  if (cfg.title) document.getElementById('dash-title').textContent = cfg.title;
+  const upd = localStorage.getItem('dashUpdated');
+  if (upd) document.getElementById('updated-badge').textContent = 'آخر تحديث: ' + upd;
+  buildRows(raw);
+  if (cfg.dept) buildDeptFilter();
+  renderAll();
+};
+
+function buildRows(raw) {
+  allRows = raw.map(r => {
+    const rev = parseFloat(r[cfg.revenue]) || 0;
+    const tgt = cfg.target ? (parseFloat(r[cfg.target]) || 0) : null;
+    const pct = tgt ? Math.round((rev / tgt) * 100) : null;
+    return {
+      name: r[cfg.name] || '—',
+      dept: cfg.dept ? (r[cfg.dept] || '—') : null,
+      revenue: rev, target: tgt, pct: pct,
+      extra: cfg.extra ? r[cfg.extra] : null,
+    };
+  }).sort((a,b) => b.revenue - a.revenue).map((r,i) => ({...r, rank: i+1}));
+  filteredRows = [...allRows];
+}
+
+function buildDeptFilter() {
+  const depts = [...new Set(allRows.map(r => r.dept))].filter(d => d && d !== '—');
+  const sel = document.getElementById('dept-filter');
+  sel.innerHTML = '<option value="">كل الأقسام</option>' + depts.map(d => `<option>${d}</option>`).join('');
+  document.getElementById('filter-bar').style.display = 'flex';
+}
+
+function applyFilter() {
+  const dept = document.getElementById('dept-filter')?.value || '';
+  const metric = document.getElementById('sort-metric')?.value || 'revenue';
+  sortCol = metric;
+  filteredRows = dept ? allRows.filter(r => r.dept === dept) : [...allRows];
+  filteredRows.sort((a,b) => (b[sortCol]??0) - (a[sortCol]??0));
+  currentPage = 1;
+  renderAll();
+}
+
+function renderAll() {
+  renderMetrics();
+  renderPodium();
+  renderCharts();
+  renderTable();
+}
+
+const fmt = n => typeof n === 'number'
+  ? (n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : Math.round(n).toLocaleString())
+  : (n ?? '—');
+
+function renderMetrics() {
+  const rows = filteredRows;
+  const totalRev = rows.reduce((s,r) => s+r.revenue, 0);
+  const totalTgt = cfg.target ? rows.reduce((s,r) => s+(r.target||0), 0) : null;
+  const avgPct = cfg.target ? Math.round(rows.reduce((s,r) => s+(r.pct||0),0)/rows.length) : null;
+  const top = rows[0];
+  const above = cfg.target ? rows.filter(r => r.pct >= 100).length : null;
+  const below = cfg.target ? rows.filter(r => r.pct !== null && r.pct < 80).length : null;
+
+  let html = `
+    <div class="metric purple"><div class="m-label">💰 إجمالي الأرباح</div><div class="m-value">${fmt(totalRev)}</div><div class="m-sub">${rows.length} دكتور/موظف</div></div>`;
+  if (totalTgt) html += `<div class="metric amber"><div class="m-label">🎯 إجمالي التارجت</div><div class="m-value">${fmt(totalTgt)}</div><div class="m-sub">متوسط الإنجاز: ${avgPct}%</div></div>`;
+  if (above !== null) html += `<div class="metric green"><div class="m-label">✅ حققوا التارجت</div><div class="m-value">${above}</div><div class="m-sub">من أصل ${rows.length}</div></div>`;
+  if (top) html += `<div class="metric green"><div class="m-label">🏆 الأعلى أرباحاً</div><div class="m-value" style="font-size:16px;margin-top:4px">${top.name}</div><div class="m-sub">${fmt(top.revenue)}</div></div>`;
+  if (below !== null) html += `<div class="metric red"><div class="m-label">⚠️ أقل من 80% تارجت</div><div class="m-value">${below}</div><div class="m-sub">يحتاجوا متابعة</div></div>`;
+  document.getElementById('metrics-row').innerHTML = html;
+}
+
+function renderPodium() {
+  const top3 = filteredRows.slice(0,3);
+  const medals = ['🥇','🥈','🥉'];
+  const classes = ['gold','silver','bronze'];
+  document.getElementById('podium').innerHTML = top3.map((r,i) => `
+    <div class="podium-item ${classes[i]}">
+      <div class="pod-rank">${medals[i]}</div>
+      <div class="pod-name">${r.name}</div>
+      <div class="pod-val">${fmt(r.revenue)}</div>
+      ${r.pct !== null ? `<div class="pod-pct">${r.pct}% من التارجت</div>` : ''}
+      ${r.dept ? `<div class="pod-pct" style="margin-top:2px">${r.dept}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderCharts() {
+  Object.values(charts).forEach(c => { try{ c.destroy(); }catch(e){} });
+  charts = {};
+  const rows = filteredRows;
+  const topN = Math.min(15, rows.length);
+  const top = rows.slice(0, topN);
+  const gc = 'rgba(255,255,255,0.06)', tc = '#8890a4';
+  const COLS = ['#7c4dff','#00c896','#ff6b6b','#ffb830','#38bdf8','#f472b6','#a78bfa','#34d399','#fb923c','#e879f9','#22d3ee','#4ade80','#fbbf24','#f87171','#60a5fa'];
+
+  // Revenue vs Target
+  const rCtx = document.getElementById('chart-revenue').getContext('2d');
+  charts.rev = new Chart(rCtx, {
+    type: 'bar',
+    data: {
+      labels: top.map(r => r.name),
+      datasets: [
+        { label: cfg.revenue, data: top.map(r => r.revenue), backgroundColor: top.map((_,i) => COLS[i%COLS.length]+'bb'), borderColor: top.map((_,i) => COLS[i%COLS.length]), borderWidth:1, borderRadius:5, borderSkipped:false },
+        ...(cfg.target ? [{ label: 'التارجت', data: top.map(r => r.target||0), backgroundColor:'rgba(255,184,48,.12)', borderColor:'#ffb830', borderWidth:2, borderRadius:5, borderSkipped:false }] : [])
+      ]
+    },
+    options: {
+      responsive:true, plugins:{ legend:{ labels:{ color:tc, font:{size:12} } }, tooltip:{ callbacks:{ label: ctx => ctx.parsed.y.toLocaleString() } } },
+      scales:{ x:{ ticks:{ color:tc, font:{size:11}, maxRotation:40 }, grid:{display:false} }, y:{ ticks:{ color:tc, callback: v => v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v }, grid:{color:gc} } }
+    }
+  });
+
+  // Target donut
+  if (cfg.target) {
+    document.getElementById('target-card').style.display = 'block';
+    const over = rows.filter(r => r.pct >= 100).length;
+    const near = rows.filter(r => r.pct >= 80 && r.pct < 100).length;
+    const below = rows.filter(r => r.pct !== null && r.pct < 80).length;
+    charts.tgt = new Chart(document.getElementById('chart-target').getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:['حقق (≥100%)','قريب (80-99%)','أقل من 80%'], datasets:[{ data:[over,near,below], backgroundColor:['#00c896bb','#ffb830bb','#ff6b6bbb'], borderColor:['#00c896','#ffb830','#ff6b6b'], borderWidth:2 }] },
+      options:{ cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{ color:tc, font:{size:12}, padding:12 } }, tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.raw} دكتور` } } } }
+    });
+  }
+
+  // Distribution
+  const vals = rows.map(r => r.revenue).filter(v => v > 0);
+  if (vals.length) {
+    const mx = Math.max(...vals), mn = Math.min(...vals), bins = 7, step = (mx-mn)/bins||1;
+    const buckets = Array.from({length:bins}, (_,i) => ({ label: fmt(mn+i*step), count:0 }));
+    vals.forEach(v => { const bi = Math.min(Math.floor((v-mn)/step), bins-1); buckets[bi].count++; });
+    charts.dist = new Chart(document.getElementById('chart-dist').getContext('2d'), {
+      type:'bar',
+      data:{ labels:buckets.map(b=>b.label), datasets:[{ label:'عدد الدكاتره', data:buckets.map(b=>b.count), backgroundColor:'#7c4dffbb', borderColor:'#7c4dff', borderWidth:1, borderRadius:4 }] },
+      options:{ plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:tc,font:{size:10},maxRotation:30},grid:{display:false}}, y:{ticks:{color:tc,stepSize:1},grid:{color:gc}} } }
+    });
+  }
+
+  // Dept bar
+  if (cfg.dept) {
+    document.getElementById('dept-card').style.display = 'block';
+    const deptMap = {};
+    rows.forEach(r => { if(r.dept && r.dept!=='—') deptMap[r.dept] = (deptMap[r.dept]||0) + r.revenue; });
+    const sorted = Object.entries(deptMap).sort((a,b) => b[1]-a[1]).slice(0,10);
+    charts.dept = new Chart(document.getElementById('chart-dept').getContext('2d'), {
+      type:'bar',
+      data:{ labels:sorted.map(d=>d[0]), datasets:[{ label:'الأرباح', data:sorted.map(d=>d[1]), backgroundColor:sorted.map((_,i)=>COLS[i%COLS.length]+'bb'), borderColor:sorted.map((_,i)=>COLS[i%COLS.length]), borderWidth:1, borderRadius:4 }] },
+      options:{ indexAxis:'y', plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>ctx.parsed.x.toLocaleString()}}}, scales:{ x:{ticks:{color:tc,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v},grid:{color:gc}}, y:{ticks:{color:tc,font:{size:11}},grid:{display:false}} } }
+    });
+  }
+}
+
+// TABLE
+function searchTable(q) { searchQuery = q.toLowerCase(); currentPage = 1; renderTable(); }
+function sortTable(col) { sortCol === col ? sortDir *= -1 : (sortCol = col, sortDir = -1); renderTable(); }
+
+function renderTable() {
+  let rows = filteredRows.filter(r =>
+    !searchQuery || r.name.toLowerCase().includes(searchQuery) || (r.dept && r.dept.toLowerCase().includes(searchQuery))
+  );
+  rows = [...rows].sort((a,b) => {
+    const va = a[sortCol]??0, vb = b[sortCol]??0;
+    return typeof va === 'string' ? va.localeCompare(vb)*sortDir : (vb-va)*(sortDir===-1?1:-1);
+  });
+  const total = rows.length, pages = Math.ceil(total/PAGE_SIZE);
+  currentPage = Math.min(currentPage, pages||1);
+  const slice = rows.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
+  const maxRev = (filteredRows[0]?.revenue)||1;
+
+  const cols = [
+    {key:'rank',label:'#'},
+    {key:'name',label:'الاسم'},
+    ...(cfg.dept?[{key:'dept',label:'القسم'}]:[]),
+    {key:'revenue',label:cfg.revenue},
+    ...(cfg.target?[{key:'target',label:cfg.target},{key:'pct',label:'نسبة التحقيق'}]:[]),
+    ...(cfg.extra?[{key:'extra',label:cfg.extra}]:[]),
+  ];
+
+  document.getElementById('table-head').innerHTML = '<tr>' + cols.map(c =>
+    `<th onclick="sortTable('${c.key}')" style="cursor:pointer">${c.label}${sortCol===c.key?(sortDir===-1?' ↓':' ↑'):''}</th>`
+  ).join('') + '</tr>';
+
+  const fmtN = n => typeof n==='number' ? n.toLocaleString(undefined,{maximumFractionDigits:2}) : (n??'—');
+
+  document.getElementById('table-body').innerHTML = slice.map(r => {
+    const bw = Math.round((r.revenue/maxRev)*100);
+    const pctTag = r.pct !== null
+      ? `<div style="display:flex;align-items:center;gap:8px">
+           <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${Math.min(r.pct,100)}%;background:${r.pct>=100?'#00c896':r.pct>=80?'#ffb830':'#ff6b6b'}"></div></div>
+           <span class="tag ${r.pct>=100?'high':r.pct>=80?'mid':'low'}">${r.pct}%</span>
+         </div>` : '—';
+    return '<tr>' + cols.map(c => {
+      if (c.key==='rank') return `<td><span class="rank-badge">${r.rank}</span></td>`;
+      if (c.key==='revenue') return `<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${bw}%;background:#7c4dff"></div></div>${fmtN(r.revenue)}</div></td>`;
+      if (c.key==='pct') return `<td>${pctTag}</td>`;
+      return `<td>${fmtN(r[c.key])}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+
+  const pg = document.getElementById('pagination');
+  if (pages<=1){pg.innerHTML='';return;}
+  let html = '';
+  if (currentPage>1) html += `<button class="page-btn" onclick="goPage(${currentPage-1})">→</button>`;
+  for(let i=1;i<=pages;i++){
+    if(i===1||i===pages||Math.abs(i-currentPage)<=2) html+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    else if(Math.abs(i-currentPage)===3) html+=`<span style="color:var(--muted);padding:0 4px">...</span>`;
+  }
+  if(currentPage<pages) html+=`<button class="page-btn" onclick="goPage(${currentPage+1})">←</button>`;
+  pg.innerHTML = html;
+}
+
+function goPage(p){ currentPage=p; renderTable(); }
+</script>
+</body>
+</html>
